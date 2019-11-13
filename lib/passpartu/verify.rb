@@ -1,7 +1,5 @@
 module Passpartu
   class Verify
-    CRUD_KEY = 'crud'.freeze
-
     attr_reader :role, :keys, :result, :only, :except, :block
 
     def initialize(role, keys, only, except, skip, block)
@@ -21,9 +19,7 @@ module Passpartu
     def call
       return false if role_ignore?
 
-      check_policy
-      check_crud if policy_missed? && last_key_crud?
-
+      @result = Passpartu::CheckPolicy.call(role_and_keys)
       validate_result
     end
 
@@ -36,29 +32,12 @@ module Passpartu
       false
     end
 
-    def check_policy
-      @result = Passpartu.policy.dig(role, *keys)
-    end
-
-    def check_crud
-      change_crud_key
-      check_policy
-    end
-
-    def change_crud_key
-      @keys[-1] = CRUD_KEY
-    end
-
-    def policy_missed?
-      @result.nil?
+    def role_and_keys
+      [role] + keys
     end
 
     def validate_result
       Passpartu::ValidateResult.call(result)
-    end
-
-    def last_key_crud?
-      %w[create read update delete].include?(keys[-1])
     end
 
     def blank?(item)
